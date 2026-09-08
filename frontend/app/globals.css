@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  
+  /* Accessibility contrast remappings: darken standard grays to meet 4.5:1 ratio */
+  --color-zinc-400: #5b5b66; /* Contrast 5.47:1 on white background */
+  --color-zinc-500: #45454d; /* Contrast 7.64:1 on white background */
+  --color-zinc-300: #888894; /* Darker border gray for better element delineation */
+
+  /* Custom Indigo Shades */
+  --color-indigo-150: #e0e0fc;
+  --color-indigo-550: #574feb;
+  --color-indigo-650: #493ed4;
+  --color-indigo-750: #3d34b6;
+  --color-indigo-850: #342f92;
+
+  /* Custom Purple Shades */
+  --color-purple-650: #882ad9;
+
+  /* Custom Zinc Shades */
+  --color-zinc-150: #ececef;
+  --color-zinc-250: #dcdcdf;
+  --color-zinc-350: #70707c;
+  --color-zinc-450: #50505a;
+  --color-zinc-550: #45454d;
+  --color-zinc-650: #33333c;
+  --color-zinc-750: #27272a;
+  --color-zinc-850: #18181b;
+
+  /* Custom Emerald Shades */
+  --color-emerald-150: #d1f2e5;
+  --color-emerald-250: #a7e6cb;
+  --color-emerald-650: #048760;
+  --color-emerald-750: #046e4f;
+
+  /* Custom Amber/Yellow Shades */
+  --color-amber-150: #fef0c7;
+  --color-amber-250: #fde047;
+  --color-amber-650: #c66507;
+
+  /* Custom Blue Shades */
+  --color-blue-750: #1d4ed8;
+
+  /* Custom Sky Shades */
+  --color-sky-150: #e0f2fe;
+
+  /* Custom Rose Shades */
+  --color-rose-150: #ffe4e6;
+
+  /* Custom Red Shades */
+  --color-red-650: #cc2121;
+}
+
+/* Accessibility: Focus visible outline for all keyboard navigation */
+*:focus-visible {
+  outline: 2.5px solid #4f46e5 !important; /* Indigo 600 */
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15) !important;
+}
+
+:root {
+  --background: #fafafa;
+  --foreground: #09090b;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar styling for conversation list */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d4d4d8;
+}
+
+/* Micro animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

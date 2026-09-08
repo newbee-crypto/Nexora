@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexora — Architecture Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fafafa;--bg2:#f4f4f5;--bg3:#ffffff;
+  --border:#e4e4e7;--border2:#d4d4d8;
+  --text:#18181b;--text2:#52525b;--text3:#a1a1aa;
+  --indigo:#4f46e5;--indigo2:#6366f1;--indigo-bg:#eef2ff;--indigo-border:#c7d2fe;
+  --emerald:#059669;--emerald-bg:#ecfdf5;--emerald-border:#a7f3d0;
+  --red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;
+  --sky:#0284c7;--sky-bg:#f0f9ff;--sky-border:#bae6fd;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow2:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.04);
+}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.fira{font-family:'Fira Code',monospace}
+
+/* HEADER */
+.header{flex-shrink:0;background:#fff;border-bottom:1.5px solid var(--border);padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between;z-index:50}
+.logo{font-size:17px;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-badge{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--indigo-bg);color:var(--indigo);border:1px solid var(--indigo-border);border-radius:4px;padding:2px 8px}
+.header-right{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text3)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#10b981;animation:pulse-dot 1.5s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* LAYOUT */
+.main{flex:1;display:grid;grid-template-columns:1fr 320px;overflow:hidden}
+.canvas-col{display:flex;flex-direction:column;overflow:hidden;border-right:1.5px solid var(--border)}
+.right-col{display:flex;flex-direction:column;overflow:hidden;background:#fff}
+
+/* SCENE TABS */
+.scene-tabs{flex-shrink:0;background:#fff;border-bottom:1.5px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:4px;height:38px;overflow-x:auto}
+.scene-tabs::-webkit-scrollbar{display:none}
+.tab-label{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-right:6px;white-space:nowrap}
+.tab{font-size:10px;font-weight:600;padding:4px 10px;border-radius:5px;border:1px solid transparent;cursor:pointer;white-space:nowrap;transition:all .15s;color:var(--text2);background:transparent}
+.tab:hover{background:var(--bg2);color:var(--text)}
+.tab.active{background:var(--indigo-bg);color:var(--indigo);border-color:var(--indigo-border);font-weight:700}
+.tab.done{color:var(--emerald);background:var(--emerald-bg);border-color:var(--emerald-border)}
+
+/* CANVAS */
+.canvas-wrap{flex:1;overflow:hidden;position:relative;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.canvas-box{width:852px;height:508px;position:relative;flex-shrink:0}
+.blueprint{position:absolute;inset:0;background-image:linear-gradient(to right,#e2e8f0 1px,transparent 1px),linear-gradient(to bottom,#e2e8f0 1px,transparent 1px);background-size:24px 24px;opacity:.5;pointer-events:none}
+.canvas-inner{position:absolute;inset:0;padding:14px;display:grid;grid-template-columns:210px 1fr 220px;grid-template-rows:1fr 120px;gap:10px}
+
+/* GLASS CARDS */
+.node{position:relative;background:rgba(255,255,255,.95);border:1.5px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;transition:all .25s;box-shadow:var(--shadow);backdrop-filter:blur(6px)}
+.node.active{border-color:var(--indigo2);box-shadow:0 0 0 3px rgba(99,102,241,.1),var(--shadow2)}
+.node.success{border-color:var(--emerald);box-shadow:0 0 0 3px rgba(5,150,105,.08)}
+.node.danger{border-color:var(--red);box-shadow:0 0 0 3px rgba(220,38,38,.08)}
+.node-be{grid-column:2;grid-row:1}
+.node-fe{grid-column:1;grid-row:1/3}
+.node-db{grid-column:3;grid-row:1}
+.node-ch{grid-column:3;grid-row:2}
+
+.node-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.node-title{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:5px}
+.node-dot{width:6px;height:6px;border-radius:50%}
+.node-port{font-family:'Fira Code',monospace;font-size:8px;color:var(--text3);font-weight:500}
+
+/* SUB BOXES inside BE */
+.sub-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 8px;transition:all .2s}
+.sub-box.hl{border-color:var(--indigo-border);background:var(--indigo-bg)}
+.sub-box.hl-green{border-color:var(--emerald-border);background:var(--emerald-bg)}
+.sub-box.hl-red{border-color:var(--red-border);background:var(--red-bg)}
+.sub-label{font-size:8px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
+
+/* KEY ROTATOR */
+.keys-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.key-pill{font-family:'Fira Code',monospace;font-size:8px;font-weight:500;padding:3px 0;border-radius:4px;border:1px solid var(--border);background:#fff;text-align:center;color:var(--text3);transition:all .25s}
+.key-pill.active{background:var(--emerald-bg);border-color:var(--emerald-border);color:var(--emerald);font-weight:700}
+.key-pill.blocked{background:var(--red-bg);border-color:var(--red-border);color:var(--red);font-weight:700}
+.key-pill.dimmed{opacity:.4}
+
+/* SEMAPHORE SLOTS */
+.sem-slots{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-top:4px}
+.sem-slot{height:6px;border-radius:2px;background:var(--border2);transition:all .2s}
+.sem-slot.busy{background:var(--red)}
+.sem-slot.free{background:var(--emerald)}
+
+/* DB TABLES */
+.db-table{background:#fff;border:1px solid var(--border);border-radius:5px;padding:6px 8px;display:flex;align-items:center;justify-content:space-between;transition:all .2s}
+.db-table.hl{border-color:var(--indigo-border);background:var(--indigo-bg)}
+.db-table.hl-green{border-color:var(--emerald-border);background:var(--emerald-bg);transform:scale(1.01)}
+.db-table.hl-amber{border-color:var(--amber-border);background:var(--amber-bg)}
+.db-table-name{font-size:8px;font-weight:700;color:var(--text)}
+.db-table-schema{font-family:'Fira Code',monospace;font-size:7px;color:var(--text3);margin-top:1px}
+.db-count{font-family:'Fira Code',monospace;font-size:8px;font-weight:600;padding:2px 6px;border-radius:3px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);white-space:nowrap}
+.db-count.green{background:var(--emerald-bg);border-color:var(--emerald-border);color:var(--emerald)}
+.db-count.blue{background:var(--indigo-bg);border-color:var(--indigo-border);color:var(--indigo)}
+
+/* ACID BOX */
+.acid-ring{position:absolute;inset:6px;border:2px dashed var(--emerald);border-radius:8px;pointer-events:none;opacity:0;transition:opacity .3s}
+.acid-label{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--emerald-border);border-radius:4px;padding:2px 8px;font-size:7px;font-weight:700;color:var(--emerald);white-space:nowrap;opacity:0;transition:opacity .3s}
+
+/* FE CHAT */
+.chat-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 8px;min-height:52px}
+.chat-text{font-size:10px;font-style:italic;color:var(--text2);line-height:1.5}
+.cursor-blink{display:inline-block;width:6px;height:11px;background:var(--indigo2);border-radius:1px;animation:blink .7s step-end infinite;vertical-align:text-bottom;margin-left:1px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* DASHBOARD BARS */
+.dash-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.dash-label{font-size:9px;color:var(--text2);font-weight:500;width:60px;flex-shrink:0}
+.dash-track{flex:1;height:5px;background:var(--border2);border-radius:3px;overflow:hidden}
+.dash-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.dash-val{font-size:9px;font-weight:700;color:var(--text);width:28px;text-align:right;flex-shrink:0}
+.roi-kpi{text-align:center;padding:6px;background:var(--indigo-bg);border:1px solid var(--indigo-border);border-radius:6px;margin-top:4px}
+.roi-val{font-size:18px;font-weight:800;color:var(--indigo)}
+.roi-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--indigo2);opacity:.7}
+
+/* STUB TERMINAL */
+.terminal{background:#18181b;border-radius:6px;padding:7px 9px;font-family:'Fira Code',monospace;font-size:8px;color:#86efac;line-height:1.5;min-height:48px}
+
+/* PACKETS LAYER */
+.packets-layer{position:absolute;inset:0;pointer-events:none;z-index:20}
+.pkt{position:absolute;padding:2px 7px;border-radius:10px;font-family:'Fira Code',monospace;font-size:8px;font-weight:600;white-space:nowrap;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 2px 4px rgba(0,0,0,.12);z-index:30}
+.pkt-indigo{background:var(--indigo);color:#fff}
+.pkt-green{background:var(--emerald);color:#fff}
+.pkt-red{background:var(--red);color:#fff}
+.pkt-amber{background:var(--amber);color:#fff}
+.pkt-sky{background:var(--sky);color:#fff}
+
+/* SVG OVERLAY */
+.svg-overlay{position:absolute;inset:0;pointer-events:none;z-index:5}
+
+/* STATUS GUARD */
+.guard-icon{font-size:16px;transition:all .3s}
+.guard-icon.active{color:var(--red);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+
+/* RADAR */
+.radar-container{position:absolute;left:145px;bottom:130px;pointer-events:none;z-index:8}
+.radar-ring{position:absolute;border-radius:50%;border:1.5px solid rgba(99,102,241,.4);top:50%;left:50%;transform:translate(-50%,-50%);animation:radar-expand 2s ease-out infinite}
+.radar-ring:nth-child(2){animation-delay:.6s}
+.radar-ring:nth-child(3){animation-delay:1.2s}
+@keyframes radar-expand{0%{width:8px;height:8px;opacity:.8}100%{width:80px;height:80px;opacity:0}}
+
+/* CONTROLS BAR */
+.controls{flex-shrink:0;background:#fff;border-top:1.5px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:10px}
+.btn-ctrl{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif}
+.btn-ctrl:hover{background:var(--bg2);border-color:var(--border2)}
+.btn-ctrl.primary{background:var(--indigo);border-color:var(--indigo);color:#fff}
+.btn-ctrl.primary:hover{background:#4338ca}
+.btn-ctrl svg{width:14px;height:14px;flex-shrink:0}
+.scrub-wrap{flex:1;display:flex;align-items:center;gap:8px}
+.scrub-wrap input[type=range]{flex:1;height:4px;accent-color:var(--indigo);cursor:pointer}
+.scrub-pct{font-family:'Fira Code',monospace;font-size:10px;font-weight:600;color:var(--text2);width:38px;text-align:right}
+.speed-sel{font-size:10px;font-weight:600;border:1.5px solid var(--border);border-radius:6px;padding:4px 8px;background:#fff;color:var(--text2);cursor:pointer;font-family:'Outfit',sans-serif}
+
+/* RIGHT PANEL */
+.exp-header{padding:12px 16px;border-bottom:1.5px solid var(--border);flex-shrink:0}
+.exp-title{font-size:13px;font-weight:700;color:var(--text);line-height:1.4}
+.why-pill{display:inline-block;margin-top:6px;font-size:9px;font-weight:700;background:var(--indigo-bg);color:var(--indigo);border:1px solid var(--indigo-border);border-radius:4px;padding:3px 8px}
+.exp-body{flex:1;overflow-y:auto;padding:12px 16px;font-size:11px;color:var(--text2);line-height:1.7}
+.exp-body::-webkit-scrollbar{width:4px}
+.exp-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.exp-body p+p{margin-top:8px}
+.exp-body strong{color:var(--text);font-weight:600}
+.exp-body code{font-family:'Fira Code',monospace;font-size:9px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:1px 4px;color:var(--indigo)}
+.exp-body ol{padding-left:14px;margin-top:6px}
+.exp-body ol li{margin-bottom:3px}
+.exp-metrics{flex-shrink:0;padding:10px 16px;border-top:1.5px solid var(--border)}
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.metric-card{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px}
+.metric-key{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
+.metric-val{font-size:11px;font-weight:700;color:var(--text);margin-top:2px}
+.step-counter{font-family:'Fira Code',monospace;font-size:9px;color:var(--text3);margin-left:auto}
+
+/* MISC */
+.badge{display:inline-flex;align-items:center;font-size:8px;font-weight:700;border-radius:3px;padding:2px 6px;border:1px solid}
+.badge-indigo{background:var(--indigo-bg);color:var(--indigo);border-color:var(--indigo-border)}
+.badge-green{background:var(--emerald-bg);color:var(--emerald);border-color:var(--emerald-border)}
+.badge-red{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+.badge-amber{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)}
+
+.spin{animation:spin 6s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+.popup{position:absolute;background:#18181b;color:#fff;border-radius:7px;padding:6px 10px;font-size:9px;font-weight:500;max-width:200px;line-height:1.5;z-index:30;pointer-events:none;box-shadow:0 8px 16px rgba(0,0,0,.2)}
+.popup-tag{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#a5b4fc;margin-bottom:2px;display:block}
+.popup::after{content:'';position:absolute;top:100%;left:16px;border:5px solid transparent;border-top-color:#18181b}
+
+/* TIMELINE AND PATH FLOW ANIMS */
+.timeline-container{display:flex;flex-direction:column;gap:11px;margin-top:2px}
+.timeline-item{display:flex;gap:10px;position:relative}
+.timeline-item::before{content:'';position:absolute;left:5.5px;top:14px;bottom:-18px;width:1.5px;background:var(--border);z-index:1}
+.timeline-item:last-child::before{display:none}
+.timeline-icon{width:13px;height:13px;border-radius:50%;background:var(--bg3);border:1.5px solid var(--text3);display:flex;align-items:center;justify-content:center;z-index:2;margin-top:2px;flex-shrink:0;font-size:7px;font-weight:700;transition:all .2s;color:transparent}
+.timeline-icon.pending{border-color:var(--text3);background:#fff}
+.timeline-icon.animating{border-color:var(--indigo2);background:var(--indigo-bg);color:var(--indigo2);box-shadow:0 0 0 2px rgba(99,102,241,.2);animation:pulse-border 1.2s ease-in-out infinite}
+.timeline-icon.completed{border-color:var(--emerald);background:var(--emerald-bg);color:var(--emerald)}
+.timeline-content{flex:1;font-size:10.5px}
+.timeline-title{font-weight:700;color:var(--text);margin-bottom:1px;transition:color .2s}
+.timeline-title.pending{color:var(--text3)}
+.timeline-title.animating{color:var(--indigo2)}
+.timeline-desc{color:var(--text2);line-height:1.5;transition:opacity .2s,filter .2s}
+.timeline-desc.pending{opacity:.35;filter:blur(0.4px)}
+.timeline-desc.animating{color:var(--indigo);font-style:italic}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0px rgba(99,102,241,.4)}50%{box-shadow:0 0 0 4px rgba(99,102,241,0)}}
+
+.svg-overlay line, .svg-overlay path{transition:stroke .3s,stroke-width .3s}
+.svg-overlay line.active-path, .svg-overlay path.active-path{stroke-width:4.5px !important;stroke-dasharray:8 5;animation:flow-arrow .8s linear infinite;transition: stroke 0.2s, filter 0.2s;}
+.svg-overlay line.active-path.reverse-path, .svg-overlay path.active-path.reverse-path{animation:flow-arrow-reverse .8s linear infinite}
+@keyframes flow-arrow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
+@keyframes flow-arrow-reverse{from{stroke-dashoffset:0}to{stroke-dashoffset:20}}
+
+/* State-specific Waveguide Glows */
+.active-path-indigo { stroke: var(--indigo2) !important; filter: drop-shadow(0 0 5px rgba(99,102,241,0.7)); }
+.active-path-green { stroke: var(--emerald) !important; filter: drop-shadow(0 0 5px rgba(16,185,129,0.7)); }
+.active-path-red { stroke: var(--red) !important; filter: drop-shadow(0 0 5px rgba(220,38,38,0.7)); }
+.active-path-amber { stroke: var(--amber) !important; filter: drop-shadow(0 0 5px rgba(217,119,6,0.7)); }
+.active-path-sky { stroke: var(--sky) !important; filter: drop-shadow(0 0 5px rgba(2,132,199,0.7)); }
+
+/* Dynamic Floating Node Status Badges */
+.node-status {
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2.5px 8px;
+  border-radius: 9999px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow2);
+  opacity: 0;
+  transform: translateY(4px) scale(0.95);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  z-index: 10;
+}
+.node-status.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: status-pulse 1.5s infinite alternate;
+}
+@keyframes status-pulse {
+  0% { transform: translateY(0) scale(1); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  100% { transform: translateY(-1.5px) scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+}
+.node-status.indigo { background: var(--indigo-bg); border-color: var(--indigo-border); color: var(--indigo); }
+.node-status.green { background: var(--emerald-bg); border-color: var(--emerald-border); color: var(--emerald); }
+.node-status.red { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+.node-status.amber { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber); }
+.node-status.sky { background: var(--sky-bg); border-color: var(--sky-border); color: var(--sky); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="logo">Nexora</span>
+    <span class="header-badge">Architecture Simulation</span>
+  </div>
+  <div class="header-right">
+    <span class="live-dot"></span>
+    Runtime Engine Visualizer
+  </div>
+</header>
+
+<!-- SCENE TABS -->
+<div class="scene-tabs">
+  <span class="tab-label">Pipeline:</span>
+  <button class="tab active" id="tab-1" onclick="jumpToScene(1)">1. Regex &amp; Keys</button>
+  <button class="tab" id="tab-2" onclick="jumpToScene(2)">2. Cohort Memory</button>
+  <button class="tab" id="tab-3" onclick="jumpToScene(3)">3. Zero-JOIN</button>
+  <button class="tab" id="tab-4" onclick="jumpToScene(4)">4. DB Reset</button>
+  <button class="tab" id="tab-5" onclick="jumpToScene(5)">5. Semaphore</button>
+  <button class="tab" id="tab-6" onclick="jumpToScene(6)">6. Priority Guard</button>
+  <button class="tab" id="tab-7" onclick="jumpToScene(7)">7. Atomic Tx</button>
+  <button class="tab" id="tab-8" onclick="jumpToScene(8)">8. Live Polling</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- CANVAS COLUMN -->
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="canvas-box">
+        <div class="blueprint"></div>
+
+        <!-- SVG CONNECTIONS -->
+        <svg class="svg-overlay" id="svg-connections">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M1 1.5L8 5L1 8.5" fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <!-- FE → BE -->
+          <line id="l-fe-be" x1="222" y1="200" x2="254" y2="200" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr)"/>
+          <!-- BE → DB -->
+          <line id="l-be-db" x1="588" y1="160" x2="618" y2="160" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr)"/>
+          <!-- BE → SEM → CH -->
+          <path id="l-be-ch" d="M 588 330 C 610 330 610 430 618 430" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr)"/>
+          <!-- CH → BE (webhook back) -->
+          <path id="l-ch-be" d="M 618 445 C 608 445 608 350 588 350" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr)"/>
+          <!-- DB → FE (polling) -->
+          <path id="l-db-fe" d="M 618 300 C 380 300 380 350 222 360" fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arr)"/>
+        </svg>
+
+        <!-- RADAR -->
+        <div class="radar-container" id="radar" style="display:none">
+          <div class="radar-ring"></div>
+          <div class="radar-ring"></div>
+          <div class="radar-ring"></div>
+        </div>
+
+        <!-- CANVAS GRID -->
+        <div class="canvas-inner">
+
+          <!-- NODE: FRONTEND -->
+          <div class="node node-fe" id="node-fe">
+            <div class="node-status" id="status-fe"></div>
+            <div class="node-header">
+              <div class="node-title">
+                <span class="node-dot" style="background:var(--indigo2)"></span>
+                Client UI (Next.js)
+              </div>
+              <span class="node-port">:3000</span>
+            </div>
+
+            <!-- Engine Badge -->
+            <span id="fe-engine" class="badge badge-indigo" style="align-self:flex-start">Engine: Custom</span>
+
+            <!-- Chat console -->
+            <div class="sub-label">AI Copilot Console</div>
+            <div class="chat-box">
+              <div class="chat-text" id="fe-chat">"Waiting for input..."</div>
+              <span class="cursor-blink" id="fe-cursor"></span>
+            </div>
+
+            <!-- Dashboard -->
+            <div class="sub-label" style="margin-top:4px">Funnel ROI Dashboard</div>
+            <div class="dash-row">
+              <span class="dash-label">Sent</span>
+              <div class="dash-track"><div class="dash-fill" id="bar-sent" style="width:0%;background:var(--indigo2)"></div></div>
+              <span class="dash-val" id="val-sent">0</span>
+            </div>
+            <div class="dash-row">
+              <span class="dash-label">Converted</span>
+              <div class="dash-track"><div class="dash-fill" id="bar-conv" style="width:0%;background:var(--emerald)"></div></div>
+              <span class="dash-val" id="val-conv">0</span>
+            </div>
+            <div class="roi-kpi">
+              <div class="roi-label">Campaign ROI</div>
+              <div class="roi-val" id="val-roi">0.0%</div>
+            </div>
+
+            <!-- Reset module (hidden by default) -->
+            <div id="fe-reset" style="display:none;margin-top:4px;border:1px solid var(--red-border);background:var(--red-bg);border-radius:6px;padding:7px 8px">
+              <div class="sub-label" style="color:var(--red)">DB Reset Console</div>
+              <div style="display:flex;align-items:center;gap:5px;margin-top:4px">
+                <div style="flex:1;background:#fff;border:1px solid var(--red-border);border-radius:4px;padding:2px 6px;font-family:'Fira Code',monospace;font-size:9px;font-weight:700" id="fe-reset-input">Waiting...</div>
+                <span id="fe-reset-lock" class="badge badge-red">LOCKED</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- NODE: BACKEND -->
+          <div class="node node-be" id="node-be">
+            <div class="node-status" id="status-be"></div>
+            <div class="node-header">
+              <div class="node-title">
+                <svg class="spin" style="width:12px;height:12px;color:var(--indigo2)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Backend Core (FastAPI)
+              </div>
+              <span class="node-port">:8000</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;flex:1">
+              <!-- Rotator -->
+              <div class="sub-box" id="sub-rot">
+                <div class="sub-label">Gemini Key Rotator</div>
+                <div class="keys-grid">
+                  <div class="key-pill" id="key-1">KEY_1</div>
+                  <div class="key-pill" id="key-2">KEY_2</div>
+                  <div class="key-pill" id="key-3">KEY_3</div>
+                  <div class="key-pill" id="key-4">KEY_4</div>
+                </div>
+                <div style="margin-top:4px;display:flex;align-items:center;justify-content:space-between">
+                  <span id="rot-status" class="badge" style="background:var(--bg2);color:var(--text3);border-color:var(--border)">Idle</span>
+                  <span style="font-size:8px;color:var(--text3)">🔒 mutex</span>
+                </div>
+              </div>
+
+              <!-- Router -->
+              <div class="sub-box" id="sub-router">
+                <div class="sub-label">AI Copilot Router</div>
+                <div style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 6px;margin-bottom:4px">
+                  <div class="sub-label">Regex Filter</div>
+                  <div id="be-regex" style="font-family:'Fira Code',monospace;font-size:8px;color:var(--text2)">\b word boundaries</div>
+                  <div id="be-regex-dot" style="width:6px;height:6px;border-radius:50%;background:var(--border2);margin-top:3px"></div>
+                </div>
+                <div style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:4px 6px">
+                  <div class="sub-label">Cohort State (LangChain)</div>
+                  <div id="be-cohort" style="font-family:'Fira Code',monospace;font-size:7.5px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">IDs: null</div>
+                </div>
+              </div>
+
+              <!-- Priority Guard -->
+              <div class="sub-box" id="sub-guard">
+                <div class="sub-label">Status Priority Guard</div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div>
+                    <div id="be-guard-eval" style="font-family:'Fira Code',monospace;font-size:8px;color:var(--text2)">Idle — no webhook</div>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
+                      <span class="badge badge-red" style="font-size:7px">P1 purchased</span>
+                      <span class="badge badge-amber" style="font-size:7px">P3 delivered</span>
+                      <span class="badge badge-indigo" style="font-size:7px">P4 opened</span>
+                    </div>
+                  </div>
+                  <span class="guard-icon" id="guard-icon">🛡</span>
+                </div>
+              </div>
+
+              <!-- Semaphore -->
+              <div class="sub-box" id="sub-sem">
+                <div class="sub-label" style="display:flex;align-items:center;justify-content:space-between">
+                  <span>asyncio.Semaphore</span>
+                  <span id="sem-badge" class="badge badge-indigo" style="font-size:7px">20/20 free</span>
+                </div>
+                <div class="sem-slots" id="sem-slots">
+                  <!-- 20 slots built by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NODE: DATABASE -->
+          <div class="node node-db" id="node-db" style="position:relative">
+            <div class="node-status" id="status-db"></div>
+            <div class="node-header">
+              <div class="node-title">
+                <svg style="width:11px;height:11px;color:var(--sky)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                PostgreSQL
+              </div>
+              <span class="node-port">:5432</span>
+            </div>
+            <div class="db-table" id="dbt-customers">
+              <div><div class="db-table-name">customers</div><div class="db-table-schema">id | tags[ ] | total_spent | total_orders</div></div>
+              <span class="db-count" id="dbc-customers">400 recs</span>
+            </div>
+            <div class="db-table" id="dbt-comms">
+              <div><div class="db-table-name">communications</div><div class="db-table-schema">campaign_id | recipient_id | status</div></div>
+              <span class="db-count" id="dbc-comms">0 recs</span>
+            </div>
+            <div class="db-table" id="dbt-orders">
+              <div><div class="db-table-name">orders</div><div class="db-table-schema">id | customer_id | amount</div></div>
+              <span class="db-count" id="dbc-orders">1,200 recs</span>
+            </div>
+            <div class="db-table" id="dbt-receipts">
+              <div><div class="db-table-name">receipts audit log</div><div class="db-table-schema">webhook_id | payload | status</div></div>
+              <span class="db-count" id="dbc-receipts">0 recs</span>
+            </div>
+            <!-- ACID ring -->
+            <div class="acid-ring" id="acid-ring"></div>
+            <div class="acid-label" id="acid-label">ACID Atomic Transaction</div>
+            <!-- Reset overlays -->
+            <div id="db-reset-ov" style="display:none;position:absolute;inset:0;background:rgba(220,38,38,.07);border-radius:10px;display:none;align-items:center;justify-content:center;z-index:10">
+              <div style="background:#fff;border:1px solid var(--red-border);border-radius:6px;padding:5px 12px;font-size:9px;font-weight:700;color:var(--red)">⟳ TRUNCATING...</div>
+            </div>
+            <div id="db-seed-ov" style="display:none;position:absolute;inset:0;background:rgba(79,70,229,.06);border-radius:10px;display:none;align-items:center;justify-content:center;z-index:10">
+              <div style="background:#fff;border:1px solid var(--indigo-border);border-radius:6px;padding:5px 12px;font-size:9px;font-weight:700;color:var(--indigo)">⟳ SEEDING 400 RECORDS...</div>
+            </div>
+          </div>
+
+          <!-- NODE: CHANNEL STUB -->
+          <div class="node node-ch" id="node-ch">
+            <div class="node-status" id="status-ch"></div>
+            <div class="node-header">
+              <div class="node-title">
+                <svg style="width:11px;height:11px;color:var(--emerald)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Channel Stub
+              </div>
+              <span class="node-port">:8001</span>
+            </div>
+            <div class="terminal" id="stub-term">[System idle. Queue empty]</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+              <span style="font-size:9px;font-weight:600;color:var(--emerald)">SMS / WhatsApp Simulator</span>
+              <span class="fira" style="font-size:8px;color:var(--text3)" id="stub-count">0 sent</span>
+            </div>
+          </div>
+
+        </div><!-- /canvas-inner -->
+
+        <!-- PACKETS LAYER -->
+        <div class="packets-layer" id="packets-layer"></div>
+
+        <!-- POPUP -->
+        <div class="popup" id="popup" style="display:none">
+          <span class="popup-tag" id="popup-tag">Note</span>
+          <span id="popup-text"></span>
+        </div>
+
+      </div><!-- /canvas-box -->
+    </div><!-- /canvas-wrap -->
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <button class="btn-ctrl" onclick="stepBack()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7M18 19l-7-7 7-7"/></svg>
+        Prev
+      </button>
+      <button class="btn-ctrl primary" id="btn-play" onclick="togglePlay()">
+        <svg id="svg-play" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+        <svg id="svg-pause" fill="currentColor" viewBox="0 0 20 20" style="display:none"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+        <span id="play-label">Auto-Play</span>
+      </button>
+      <button class="btn-ctrl" onclick="stepForward()">
+        Next
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M6 5l7 7-7 7"/></svg>
+      </button>
+      <select class="speed-sel" onchange="speedMul=parseFloat(this.value)">
+        <option value="0.05">Snail Speed (0.05x)</option>
+        <option value="0.15" selected>Super Slow (0.15x)</option>
+        <option value="0.3">Very Slow (0.3x)</option>
+        <option value="0.6">Slow (0.6x)</option>
+        <option value="1">Normal (1x)</option>
+        <option value="2">Fast (2x)</option>
+      </select>
+      <div class="scrub-wrap">
+        <span style="font-size:9px;font-weight:700;color:var(--text3);white-space:nowrap">SCRUB</span>
+        <input type="range" id="scrubber" min="0" max="799" value="0" oninput="scrubTo(this.value)">
+        <span class="scrub-pct" id="scrub-pct">0.0%</span>
+      </div>
+      <span class="step-counter" id="step-counter">Scene 1 / 8</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-col">
+    <div class="exp-header">
+      <div class="exp-title" id="exp-title">1. Chat Input &amp; Regex Word Boundary Check</div>
+      <div class="why-pill" id="exp-why">WHY: Regex prevents rate limits &amp; substring match bugs!</div>
+    </div>
+    <div class="exp-body" id="exp-body"></div>
+    <div class="exp-metrics">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Engineering Concepts</div>
+<div class="metrics-grid">
+        <div class="metric-card"><div class="metric-key">LLM Safety</div><div class="metric-val" id="m-llm">Rotating Keys</div></div>
+        <div class="metric-card"><div class="metric-key">Write Locking</div><div class="metric-val" id="m-lock">Not Involved</div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ── Build semaphore slots ──────────────────────────────────────────────────
+const semGrid = document.getElementById('sem-slots');
+for(let i=0;i<20;i++){const d=document.createElement('div');d.className='sem-slot';d.id='ss'+i;semGrid.appendChild(d);}
+
+// ── Scene data (Step-by-step Array format) ────────────────────────────────────────────────────────────
+const SCENES = {
+  1: {
+    title: "1. Chat Input & Regex Word Boundary Check",
+    why: "WHY: Regex prevents rate limits & substring match bugs!",
+    llm: "Rotator Mutex",
+    lock: "Not Involved",
+    steps: [
+      {
+        range: [0, 20],
+        title: "Send Campaign Prompt",
+        animDesc: "Sending prompt from Client UI to FastAPI backend...",
+        compDesc: "Client UI sends user prompt <em>'Give me list of top 5 performing customers'</em> to Backend Core."
+      },
+      {
+        range: [20, 40],
+        title: "Regex Boundary Filter",
+        animDesc: "Backend evaluating input using Regex boundaries...",
+        compDesc: "<strong>Regex Word Boundary:</strong> Evaluated using <code>\\bmin\\b</code>, which correctly skips the word <em>'performing'</em> (avoiding false positive match), preventing query failures."
+      },
+      {
+        range: [40, 60],
+        title: "Gemini Key 1 Rate Limit",
+        animDesc: "Backend requests Gemini API using Key 1... Rate limit hit!",
+        compDesc: "Gemini API returns a <code>429 Rate Limit Exceeded</code> error packet back to the backend."
+      },
+      {
+        range: [60, 75],
+        title: "Key Rotator Pool",
+        animDesc: "Key Rotator resolving block...",
+        compDesc: "<strong>Key Rotation:</strong> Key 1 marked as blocked. Mutex lock triggers automatic failover rotation to Key 2."
+      },
+      {
+        range: [75, 90],
+        title: "Retry API with Key 2",
+        animDesc: "Retrying Gemini API request using Key 2...",
+        compDesc: "Backend sends retried request with <code>KEY_2</code> credential headers."
+      },
+      {
+        range: [90, 100],
+        title: "Response Success",
+        animDesc: "Retrieving successful campaign parameters...",
+        compDesc: "<strong>Success:</strong> API call succeeds using rotated Key 2. Thread-safe pool prevented dropped requests."
+      }
+    ]
+  },
+  2: {
+    title: "2. Cohort Pronoun Carryover (LangChain Context)",
+    why: "WHY: Storing cohort IDs in history state preserves targets!",
+    llm: "History Context",
+    lock: "Read Only",
+    steps: [
+      {
+        range: [0, 30],
+        title: "Send Follow-up Prompt",
+        animDesc: "Sending prompt with Hinglish pronoun carryover...",
+        compDesc: "User enters: <em>'send them a 50% discount message'</em>. Prompt sent to FastAPI."
+      },
+      {
+        range: [30, 65],
+        title: "LangChain History Context",
+        animDesc: "Extracting reference IDs from conversational memory...",
+        compDesc: "<strong>Context Extraction:</strong> LangChain context detects pronoun <em>'them'</em>. Resolves it by pulling the 5 exact cohort customer IDs directly from the conversation history."
+      },
+      {
+        range: [65, 85],
+        title: "Send Target Cohort Query",
+        animDesc: "Sending IDs list to PostgreSQL for segment filtering...",
+        compDesc: "Backend sends query filters with specific Customer IDs <code>[18,42,87,102,145]</code> directly to the DB."
+      },
+      {
+        range: [85, 100],
+        title: "Postgres Target Read",
+        animDesc: "Database checking records for target cohort...",
+        compDesc: "<strong>Zero-scan Read:</strong> PostgreSQL fetches the specific rows directly, avoiding a full table scan."
+      }
+    ]
+  },
+  3: {
+    title: "3. Dynamic Segment Query — Zero-JOIN Read",
+    why: "WHY: Denormalization enables queries in <10ms with 0 joins!",
+    llm: "Cached Segment",
+    lock: "Shared Read Lock",
+    steps: [
+      {
+        range: [0, 50],
+        title: "Execute Segment Query",
+        animDesc: "Sending denormalized query to PostgreSQL...",
+        compDesc: "FastAPI requests customers matching <code>tags @> '{vip}'</code>."
+      },
+      {
+        range: [50, 75],
+        title: "Zero-JOIN Index Scan",
+        animDesc: "Scanning denormalized columns on customer rows...",
+        compDesc: "<strong>Zero-JOIN Read:</strong> Postgres queries the denormalized array columns directly. No <code>INNER JOIN</code> required."
+      },
+      {
+        range: [75, 95],
+        title: "Return Target Records",
+        animDesc: "Returning query results to backend...",
+        compDesc: "Postgres returns 247 matching customer records in under 10ms."
+      },
+      {
+        range: [95, 100],
+        title: "Read Finalized",
+        animDesc: "Finalizing read session...",
+        compDesc: "<strong>Performance:</strong> Zero-JOIN structure prevents DB congestion under heavy concurrent marketing operations."
+      }
+    ]
+  },
+  4: {
+    title: "4. Database Reset Controls & Cascade Safety Gate",
+    why: "WHY: Double-confirmation guard prevents destructive wipes!",
+    llm: "Idle",
+    lock: "Exclusive Table Lock",
+    steps: [
+      {
+        range: [0, 20],
+        title: "Explicit Confirmation",
+        animDesc: "User typing RESE... to unlock safety gate...",
+        compDesc: "Frontend Console requires typing <code>RESEED</code> to prevent accidental wipe calls."
+      },
+      {
+        range: [20, 40],
+        title: "Send RESEED Command",
+        animDesc: "Sending POST /reset-db request to backend...",
+        compDesc: "Modal safety gate unlocked. <code>POST /reset-db</code> dispatched to FastAPI."
+      },
+      {
+        range: [40, 60],
+        title: "Verify Admin Session",
+        animDesc: "Backend authenticating reset payload...",
+        compDesc: "FastAPI validates explicit signature and triggers database truncation cascade."
+      },
+      {
+        range: [60, 75],
+        title: "Dispatched Cascade TRUNCATE",
+        animDesc: "Sending TRUNCATE CASCADE query to database...",
+        compDesc: "FastAPI fires <code>TRUNCATE CASCADE</code> query to PostgreSQL."
+      },
+      {
+        range: [75, 90],
+        title: "SQL Cascading Wipe",
+        animDesc: "SQL engine dropping table contents...",
+        compDesc: "<strong>SQL Cascade:</strong> Database automatically wipes child records first (audit logs, communications) before wiping the parent customer tables."
+      },
+      {
+        range: [90, 100],
+        title: "Reseed Customer Records",
+        animDesc: "Running seed.py script to populate baseline records...",
+        compDesc: "<strong>seed.py Script:</strong> Wrote 400 clean customer profiles and 1,200 orders back to DB."
+      }
+    ]
+  },
+  5: {
+    title: "5. Async Dispatch & asyncio.Semaphore Throttling",
+    why: "WHY: Semaphore prevents API port exhaustion!",
+    llm: "Idle",
+    lock: "Queued State Write",
+    steps: [
+      {
+        range: [0, 20],
+        title: "Launch Campaign",
+        animDesc: "Sending campaign launch request to backend...",
+        compDesc: "Marketer clicks 'Launch Campaign', sending execution payload to FastAPI."
+      },
+      {
+        range: [20, 35],
+        title: "Initialize Background Dispatcher",
+        animDesc: "Backend initializing task dispatcher...",
+        compDesc: "FastAPI accepts campaign launch, schedules background worker thread."
+      },
+      {
+        range: [35, 50],
+        title: "Non-Blocking Response",
+        animDesc: "FastAPI returning instant status response...",
+        compDesc: "<strong>202 Accepted:</strong> API returns 202 instantly, allowing Next.js dashboard to remain responsive."
+      },
+      {
+        range: [50, 65],
+        title: "Update UI State",
+        animDesc: "Updating Client UI progress bars...",
+        compDesc: "Client UI progress updates instantly, indicating campaign is queued."
+      },
+      {
+        range: [65, 80],
+        title: "Bulk Insert Logs",
+        animDesc: "Writing communication logs to database...",
+        compDesc: "Dispatcher inserts 100 campaign recipient logs in database with <code>state='queued'</code>."
+      },
+      {
+        range: [80, 90],
+        title: "Queue Populated",
+        animDesc: "Verifying communication table queue...",
+        compDesc: "Database confirms 100 queued records. Ready for async dispatch."
+      },
+      {
+        range: [90, 100],
+        title: "Throttled API Dispatch",
+        animDesc: "Sending batch packets via Semaphore gate...",
+        compDesc: "<strong>asyncio.Semaphore(20):</strong> Restricts outgoing calls. Only 20 in-flight requests proceed, protecting external API endpoints from socket fatigue."
+      }
+    ]
+  },
+  6: {
+    title: "6. Webhook Race Conditions & Priority Guards",
+    why: "WHY: Webhook priority checks prevent status regressions!",
+    llm: "Idle",
+    lock: "Append-only Log",
+    steps: [
+      {
+        range: [0, 25],
+        title: "Webhook A (Opened - P4)",
+        animDesc: "Webhook A (opened, Priority 4) travelling to backend...",
+        compDesc: "Channel Stub sends Webhook A payload: <code>status='opened' (Priority 4)</code> at t = 1.0s."
+      },
+      {
+        range: [25, 45],
+        title: "Process Webhook A",
+        animDesc: "Updating communication log status...",
+        compDesc: "<strong>Initial Webhook:</strong> Webhook A processed. DB updates communication record to <code>opened</code>."
+      },
+      {
+        range: [45, 70],
+        title: "Webhook B (Delivered - P3)",
+        animDesc: "Delayed Webhook B (delivered, Priority 3) travelling to backend...",
+        compDesc: "Channel Stub sends delayed Webhook B payload: <code>status='delivered' (Priority 3)</code> at t = 1.1s."
+      },
+      {
+        range: [70, 85],
+        title: "Priority Guard Block",
+        animDesc: "Evaluating status hierarchy to block regression...",
+        compDesc: "<strong>Status Regression Prevention:</strong> Priority Guard blocks update. <code>delivered (P3)</code> is lower priority than existing <code>opened (P4)</code>."
+      },
+      {
+        range: [85, 100],
+        title: "Audit Log Append",
+        animDesc: "Appending webhook B payload to receipts audit log...",
+        compDesc: "<strong>Safe Logging:</strong> DB records Webhook B payload inside the <code>receipts audit log</code> table without corrupting communication status."
+      }
+    ]
+  },
+  7: {
+    title: "7. Converted Purchase & ACID Atomic Transaction",
+    why: "WHY: ACID guarantees all 3 writes succeed together or rollback!",
+    llm: "Idle",
+    lock: "ACID Write Locks",
+    steps: [
+      {
+        range: [0, 35],
+        title: "Webhook Nexoran",
+        animDesc: "Channel Stub sending purchased webhook...",
+        compDesc: "Channel Stub detects purchase event, dispatches conversion webhook to backend."
+      },
+      {
+        range: [35, 55],
+        title: "Initialize SQL Transaction",
+        animDesc: "FastAPI starting Postgres atomic transaction block...",
+        compDesc: "Backend starts SQL transaction block: <code>BEGIN;</code>. All subsequent writes are isolated."
+      },
+      {
+        range: [55, 80],
+        title: "Submit Atomic Writes",
+        animDesc: "Executing 3 database updates synchronously...",
+        compDesc: "Sends queries to update comms status, insert order, and increment customer counters."
+      },
+      {
+        range: [80, 100],
+        title: "Atomic Commit Success",
+        animDesc: "Committing database updates...",
+        compDesc: "<strong>ACID Commit:</strong> Transaction completes. Updates committed together. Failures trigger full rollback, preventing data corruption."
+      }
+    ]
+  },
+  8: {
+    title: "8. Client Polling & Funnel Analytics Dashboard ROI",
+    why: "WHY: Periodic polling keeps charts updated without WebSocket overhead!",
+    llm: "Idle",
+    lock: "Read Committed",
+    steps: [
+      {
+        range: [0, 40],
+        title: "Send Polling Query",
+        animDesc: "Client requesting dashboard statistics...",
+        compDesc: "Next.js initiates HTTP short poll request <code>GET /stats</code> to retrieve ROI metrics."
+      },
+      {
+        range: [40, 60],
+        title: "Fetch Metric Summary",
+        animDesc: "FastAPI reading metrics from Postgres...",
+        compDesc: "<strong>Database Read:</strong> Backend reads campaign funnel stats using <code>Read Committed</code> isolation."
+      },
+      {
+        range: [60, 85],
+        title: "Return Statistics",
+        animDesc: "Returning campaign metrics to client...",
+        compDesc: "FastAPI sends calculation response: Sent: 100, Converted: 18, ROI: 30525%."
+      },
+      {
+        range: [85, 100],
+        title: "Dashboard Synced",
+        animDesc: "Updating dashboard UI and graphs...",
+        compDesc: "<strong>Real-time Update:</strong> Frontend updates funnel bars and ROI metrics. Campaign ROI completes successfully at 30,525%."
+      }
+    ]
+  }
+};
+
+// ── State ─────────────────────────────────────────────────────────────────
+let prog=0, playing=false, speedMul=0.15, rafId=null;
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function q(id){return document.getElementById(id)}
+function setClass(id,cls){q(id).className=cls}
+function setText(id,t){q(id).textContent=t}
+function setHTML(id,h){q(id).innerHTML=h}
+function show(id,flex=false){q(id).style.display=flex?'flex':'block'}
+function hide(id){q(id).style.display='none'}
+
+function setNodeStatus(nodeId, text, type = 'indigo') {
+  const el = q('status-' + nodeId);
+  if (!el) return;
+  if (text) {
+    el.textContent = text;
+    el.className = 'node-status active ' + type;
+  } else {
+    el.className = 'node-status';
+  }
+}
+
+// ── SVG path interpolation for packets ───────────────────────────────────
+function getPathPoint(pathId, ratio){
+  const el=document.getElementById(pathId);
+  if(!el)return null;
+  const len=el.getTotalLength();
+  return el.getPointAtLength(Math.max(0,Math.min(1,ratio))*len);
+}
+
+// Line interpolation (for line elements)
+function getLinePoint(x1,y1,x2,y2,r){
+  return {x:x1+(x2-x1)*r, y:y1+(y2-y1)*r};
+}
+
+function spawnPacket(x,y,cls,text){
+  const el=document.createElement('div');
+  el.className='pkt '+cls;
+  el.style.left=x+'px';
+  el.style.top=y+'px';
+  el.textContent=text;
+  q('packets-layer').appendChild(el);
+}
+
+// Make packet layer look like it has movement direction
+function clearPackets(){q('packets-layer').innerHTML=''}
+
+function showPopup(x,y,tag,text){
+  const p=q('popup');
+  setText('popup-tag',tag);
+  setText('popup-text',text);
+  p.style.left=x+'px';
+  p.style.top=y+'px';
+  p.style.display='block';
+}
+function hidePopup(){q('popup').style.display='none'}
+
+// Line segment coords (matching SVG lines)
+const LINES={
+  'fe-be':{x1:222,y1:200,x2:254,y2:200},
+  'be-db':{x1:588,y1:160,x2:618,y2:160},
+};
+
+function pktOnLine(lk, r, cls, txt){
+  const l=LINES[lk];
+  if(!l)return;
+  const pt=getLinePoint(l.x1,l.y1,l.x2,l.y2,r);
+  spawnPacket(pt.x,pt.y,cls,txt);
+}
+
+function pktOnPath(pid, r, cls, txt){
+  const pt=getPathPoint(pid,r);
+  if(!pt)return;
+  spawnPacket(pt.x,pt.y,cls,txt);
+}
+
+// ── Reset all visual states ───────────────────────────────────────────────
+function resetAll(){
+  clearPackets(); hidePopup();
+  // Nodes
+  ['node-fe','node-be','node-db','node-ch'].forEach(id=>{
+    q(id).className='node ' + (id === 'node-be' ? 'node-be' : id === 'node-fe' ? 'node-fe' : id === 'node-db' ? 'node-db' : 'node-ch');
+  });
+  // Sub boxes
+  ['sub-rot','sub-router','sub-guard','sub-sem'].forEach(id=>{
+    q(id).className='sub-box';
+  });
+  // Keys
+  for(let i=1;i<=4;i++) q('key-'+i).className='key-pill';
+  setText('rot-status','Idle');
+  q('rot-status').className='badge';
+  q('rot-status').style.cssText='background:var(--bg2);color:var(--text3);border-color:var(--border)';
+  // Regex
+  setText('be-regex','\\b word boundaries');
+  q('be-regex-dot').style.background='var(--border2)';
+  setText('be-cohort','IDs: null');
+  q('be-cohort').style.color='var(--text3)';
+  // Guard
+  setText('be-guard-eval','Idle — no webhook');
+  q('be-guard-eval').style.color='var(--text2)';
+  q('guard-icon').className='guard-icon';
+  // Sem slots
+  for(let i=0;i<20;i++){q('ss'+i).className='sem-slot';}
+  q('sem-badge').textContent='20/20 free';
+  q('sem-badge').className='badge badge-indigo';
+  // DB tables
+  ['customers','comms','orders','receipts'].forEach(t=>{
+    q('dbt-'+t).className='db-table';
+    q('dbc-'+t).className='db-count';
+  });
+  setText('dbc-customers','400 recs');
+  setText('dbc-comms','0 recs');
+  setText('dbc-orders','1,200 recs');
+  setText('dbc-receipts','0 recs');
+  // ACID
+  q('acid-ring').style.opacity='0';
+  q('acid-label').style.opacity='0';
+  // Overlays
+  q('db-reset-ov').style.display='none';
+  q('db-seed-ov').style.display='none';
+  // FE
+  q('fe-cursor').style.display='none';
+  q('fe-reset').style.display='none';
+  setText('fe-chat','"Waiting for input..."');
+  setText('fe-engine','Engine: Custom');
+  q('fe-engine').className='badge badge-indigo';
+  q('bar-sent').style.width='0%';
+  q('bar-conv').style.width='0%';
+  setText('val-sent','0');
+  setText('val-conv','0');
+  setText('val-roi','0.0%');
+  // Stub
+  setText('stub-term','[System idle. Queue empty]');
+  setText('stub-count','0 sent');
+  // Radar
+  hide('radar');
+  // SVG lines
+  ['l-fe-be','l-be-db','l-be-ch','l-ch-be','l-db-fe'].forEach(id=>{
+    const el=q(id);
+    el.setAttribute('stroke','#cbd5e1');
+    el.classList.remove('active-path', 'reverse-path', 'active-path-indigo', 'active-path-green', 'active-path-red', 'active-path-amber', 'active-path-sky');
+  });
+  // Status badges
+  ['fe','be','db','ch'].forEach(id=>setNodeStatus(id,''));
+}
+
+function hlLine(id, type='indigo', isReverse=false){
+  const el = q(id);
+  if(!el) return;
+  el.classList.remove('active-path-indigo', 'active-path-green', 'active-path-red', 'active-path-amber', 'active-path-sky');
+  el.classList.add('active-path');
+  el.classList.add('active-path-' + type);
+  if(isReverse){
+    el.classList.add('reverse-path');
+  } else {
+    el.classList.remove('reverse-path');
+  }
+}
+
+// ── Render Timeline (Step-by-step panel) ────────────────────────────────
+function renderTimeline(scene, p) {
+  if (!scene || !scene.steps) return;
+  
+  let html = '<div class="timeline-container">';
+  
+  scene.steps.forEach((step) => {
+    const [start, end] = step.range;
+    const currentP = p * 100; // 0 to 100
+    
+    let statusClass = 'pending';
+    let iconContent = '●';
+    let descContent = step.animDesc;
+    
+    if (currentP >= end) {
+      statusClass = 'completed';
+      iconContent = '✓';
+      descContent = step.compDesc;
+    } else if (currentP >= start && currentP < end) {
+      statusClass = 'animating';
+      iconContent = '▶';
+      descContent = step.animDesc;
+    } else {
+      statusClass = 'pending';
+      iconContent = '●';
+      descContent = step.animDesc;
+    }
+    
+    html += `
+      <div class="timeline-item">
+        <div class="timeline-icon ${statusClass}">${iconContent}</div>
+        <div class="timeline-content">
+          <div class="timeline-title ${statusClass}">${step.title}</div>
+          <div class="timeline-desc ${statusClass}">${descContent}</div>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  setHTML('exp-body', html);
+}
+
+// ── Render scene ──────────────────────────────────────────────────────────
+function render(){
+  resetAll();
+  const scene=Math.min(8,Math.floor(prog/100)+1);
+  const p=(prog%100)/100; // 0→1 within scene
+
+  // Update tabs
+  for(let i=1;i<=8;i++){
+    const t=q('tab-'+i);
+    t.className='tab'+(i===scene?' active':i<scene?' done':'');
+  }
+  // Update right panel
+  const s=SCENES[scene];
+  setText('exp-title',s.title);
+  setText('exp-why',s.why);
+  setText('m-llm',s.llm);
+  setText('m-lock',s.lock);
+  setText('step-counter','Scene '+scene+' / 8');
+  renderTimeline(s, p);
+
+  switch(scene){
+    case 1:
+      setText('fe-engine','Engine: LangChain');
+      setText('fe-chat','"Give me list of top 5 performing customers"');
+      q('node-fe').classList.add('active');
+
+      if(p<0.20){
+        // 1. Send Campaign Prompt (In flight)
+        hlLine('l-fe-be', 'indigo');
+        pktOnLine('fe-be', p/0.20, 'pkt-indigo', "➔ PROMPT");
+        setNodeStatus('fe', 'Sending Prompt', 'indigo');
+      } 
+      else if(p<0.40){
+        // 2. Regex boundary evaluation (Arrived)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-regex','\\bmin\\b → 0 matches!');
+        q('be-regex').style.color='var(--emerald)';
+        q('be-regex-dot').style.background='var(--emerald)';
+        showPopup(260,130,'② Regex Parser',"\\b boundaries skip 'performing' — prevents substring match bugs on 'min'.");
+        setNodeStatus('be', 'Checking Regex', 'indigo');
+      } 
+      else if(p<0.60){
+        // 3. Key 1 Rate Limit 429 response (In flight reverse)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-regex','\\bmin\\b → 0 matches!');
+        q('be-regex').style.color='var(--emerald)';
+        q('be-regex-dot').style.background='var(--emerald)';
+        
+        hlLine('l-fe-be','red', true);
+        const r=(p-0.40)/0.20;
+        pktOnLine('fe-be', 1 - r, 'pkt-red', "◀ 429 Error");
+        setNodeStatus('be', 'API Error 429', 'red');
+        setNodeStatus('fe', 'Receiving Error', 'red');
+      } 
+      else if(p<0.75){
+        // 4. Key 1 blocked, mutex rotating (Arrived)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-regex','\\bmin\\b → 0 matches!');
+        q('be-regex').style.color='var(--emerald)';
+        q('be-regex-dot').style.background='var(--emerald)';
+        
+        q('sub-rot').classList.add('hl-red');
+        q('key-1').className='key-pill blocked';
+        setText('rot-status','429 RATE LIMIT');
+        q('rot-status').className='badge badge-red';
+        showPopup(260,80,'④ Rotator Pool',"Key 1 rate-limited. Mutex lock triggers rotation to Key 2.");
+        setNodeStatus('be', 'Mutex Rotating', 'amber');
+      } 
+      else if(p<0.90){
+        // 5. Retry request with Key 2 (In flight)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-regex','\\bmin\\b → 0 matches!');
+        q('be-regex').style.color='var(--emerald)';
+        q('be-regex-dot').style.background='var(--emerald)';
+        
+        q('sub-rot').classList.add('hl');
+        q('key-1').className='key-pill dimmed';
+        q('key-2').className='key-pill active';
+        
+        hlLine('l-fe-be','green');
+        const r=(p-0.75)/0.15;
+        pktOnLine('fe-be', r, 'pkt-green', "➔ API KEY (KEY_2)");
+        setNodeStatus('be', 'Retrying Key 2', 'indigo');
+      } 
+      else {
+        // 6. Mutex success (Arrived)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-regex','\\bmin\\b → 0 matches!');
+        q('be-regex').style.color='var(--emerald)';
+        q('be-regex-dot').style.background='var(--emerald)';
+        
+        q('sub-rot').classList.add('hl');
+        q('key-1').className='key-pill dimmed';
+        q('key-2').className='key-pill active';
+        setText('rot-status','→ KEY_2 Active');
+        q('rot-status').className='badge badge-green';
+        showPopup(260,80,'⑥ Mutex Rotation',"Thread-safe key rotation — Key 2 picks up instantly with zero dropped requests.");
+        setNodeStatus('be', 'Key Rotated', 'green');
+        setNodeStatus('fe', 'Campaign Parsed', 'green');
+      }
+      break;
+
+    case 2:
+      setText('fe-engine','Engine: LangChain');
+      setText('fe-chat','"send them a 50% discount message"');
+      q('node-fe').classList.add('active');
+
+      if(p<0.30){
+        // 1. Send Follow-up Prompt (In flight)
+        hlLine('l-fe-be', 'indigo');
+        pktOnLine('fe-be', p/0.30, 'pkt-indigo', "➔ PROMPT: 'send them...'");
+        setNodeStatus('fe', 'Sending Prompt', 'indigo');
+      } 
+      else if(p<0.65){
+        // 2. LangChain context extraction (Arrived)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-cohort','IDs: [18,42,87,102,145]');
+        q('be-cohort').style.color='var(--indigo)';
+        showPopup(260,180,'② LangChain Memory',"Pronoun 'them' detected. Pulling exact cohort IDs from history state.");
+        setNodeStatus('be', 'History Memory', 'indigo');
+      } 
+      else if(p<0.85){
+        // 3. Send cohort query to DB (In flight)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-cohort','IDs: [18,42,87,102,145]');
+        q('be-cohort').style.color='var(--indigo)';
+        
+        hlLine('l-be-db', 'indigo');
+        const r=(p-0.65)/0.20;
+        pktOnLine('be-db', r, 'pkt-indigo', "➔ IDS: [18,42,87,102,145]");
+        setNodeStatus('be', 'Querying Cohort', 'indigo');
+      } 
+      else {
+        // 4. Postgres Target Read (Arrived)
+        q('node-be').classList.add('active');
+        q('sub-router').classList.add('hl');
+        setText('be-cohort','IDs: [18,42,87,102,145]');
+        q('be-cohort').style.color='var(--indigo)';
+        
+        q('node-db').classList.add('active');
+        q('dbt-customers').className='db-table hl';
+        showPopup(460,140,'④ Postgres Target Read',"5 targeted IDs sent to Postgres without full re-scan.");
+        setNodeStatus('db', 'Index Read', 'green');
+      }
+      break;
+
+    case 3:
+      setText('fe-chat','"Segment filter applied."');
+      q('node-be').classList.add('active');
+
+      if(p<0.50){
+        // 1. Segment query to DB (In flight)
+        hlLine('l-be-db', 'sky');
+        pktOnLine('be-db', p/0.50, 'pkt-sky', "➔ SELECT tags");
+        setNodeStatus('be', 'Querying DB', 'sky');
+        setNodeStatus('db', 'Evaluating Tags', 'sky');
+      } 
+      else if(p<0.75){
+        // 2. Zero-JOIN Read (Arrived)
+        q('node-db').classList.add('active');
+        q('dbt-customers').className='db-table hl-green';
+        q('dbc-customers').className='db-count green';
+        setText('dbc-customers','247 matched');
+        showPopup(460,130,'② Index Scan',"Denormalized tags[] and total_spent cols live on customer row — no ORDER JOIN needed.");
+      } 
+      else if(p<0.95){
+        // 3. Response packet back to BE (In flight reverse)
+        q('node-db').classList.add('active');
+        q('dbt-customers').className='db-table hl-green';
+        q('dbc-customers').className='db-count green';
+        setText('dbc-customers','247 matched');
+        
+        hlLine('l-be-db', 'green', true);
+        const r=(p-0.75)/0.20;
+        pktOnLine('be-db', 1 - r, 'pkt-green', "◀ <10ms | 0 JOINs");
+        setNodeStatus('db', 'Sending Results', 'green');
+        setNodeStatus('be', 'Processing Rows', 'green');
+      } 
+      else {
+        // 4. Read Finalized (Arrived)
+        q('node-db').classList.add('active');
+        q('dbt-customers').className='db-table hl-green';
+        q('dbc-customers').className='db-count green';
+        setText('dbc-customers','247 matched');
+        
+        q('node-be').classList.add('active');
+        showPopup(260,180,'④ Query Finalized',"PostgreSQL reads completed in <10ms due to denormalization.");
+        setNodeStatus('be', 'Execution Done', 'green');
+      }
+      break;
+
+    case 4:
+      setText('fe-chat','"Managing database reset..."');
+      q('node-fe').classList.add('active');
+      q('fe-reset').style.display='block';
+
+      if(p<0.20){
+        // 1. Typing RESE...
+        setText('fe-reset-input','RESE...');
+        q('fe-reset-lock').textContent='LOCKED';
+        q('fe-reset-lock').className='badge badge-red';
+        setNodeStatus('fe', 'Typing Command', 'indigo');
+      } 
+      else if(p<0.40){
+        // 2. Send RESEED command (In flight)
+        setText('fe-reset-input','RESEED ✓');
+        q('fe-reset-lock').textContent='UNLOCKED';
+        q('fe-reset-lock').className='badge badge-green';
+        
+        hlLine('l-fe-be', 'red');
+        const r=(p-0.20)/0.20;
+        pktOnLine('fe-be', r, 'pkt-red', "➔ POST /reset-db");
+        setNodeStatus('fe', 'Sending Command', 'red');
+      } 
+      else if(p<0.60){
+        // 3. Reset command received at BE (Arrived)
+        setText('fe-reset-input','RESEED ✓');
+        q('fe-reset-lock').textContent='UNLOCKED';
+        q('fe-reset-lock').className='badge badge-green';
+        
+        q('node-be').classList.add('active');
+        showPopup(260,130,'③ Admin Authorization',"API router receives reset command and starts cascading truncations.");
+        setNodeStatus('be', 'Authorizing Reset', 'red');
+      } 
+      else if(p<0.75){
+        // 4. Dispatch Cascade TRUNCATE (In flight)
+        setText('fe-reset-input','RESEED ✓');
+        q('fe-reset-lock').textContent='UNLOCKED';
+        q('fe-reset-lock').className='badge badge-green';
+        
+        q('node-be').classList.add('active');
+        hlLine('l-be-db','red');
+        const r=(p-0.60)/0.15;
+        pktOnLine('be-db', r, 'pkt-red', "➔ TRUNCATE CASCADE");
+        setNodeStatus('be', 'Dispatching Wipe', 'red');
+      } 
+      else if(p<0.90){
+        // 5. Cascade Wipe complete (Arrived)
+        setText('fe-reset-input','RESEED ✓');
+        q('fe-reset-lock').textContent='UNLOCKED';
+        q('fe-reset-lock').className='badge badge-green';
+        
+        q('node-db').classList.add('danger');
+        q('db-reset-ov').style.display='flex';
+        setText('dbc-customers','0 recs');
+        setText('dbc-comms','0 recs');
+        setText('dbc-orders','0 recs');
+        setText('dbc-receipts','0 recs');
+        showPopup(460,120,'⑤ Cascading Wipe',"TRUNCATE CASCADE wipes child records (receipts, comms) automatically in correct FK order.");
+        setNodeStatus('db', 'TRUNCATING...', 'red');
+      } 
+      else {
+        // 6. Reseed completed (Arrived)
+        setText('fe-reset-input','RESEED ✓');
+        q('fe-reset-lock').textContent='UNLOCKED';
+        q('fe-reset-lock').className='badge badge-green';
+        
+        q('node-db').classList.add('active');
+        q('db-seed-ov').style.display='flex';
+        setText('dbc-customers','400 recs (seeded)');
+        setText('dbc-orders','1,200 recs (seeded)');
+        showPopup(460,120,'⑥ Reseed Completed',"FastAPI runs seed.py returning app to clean baseline with 400 customer profiles.");
+        setNodeStatus('db', 'SEEDING...', 'indigo');
+      }
+      break;
+
+    case 5:
+      setText('fe-chat','"Launch campaign clicked."');
+      q('node-fe').classList.add('active');
+
+      if(p<0.20){
+        // 1. Launch request (In flight)
+        hlLine('l-fe-be', 'indigo');
+        pktOnLine('fe-be', p/0.20, 'pkt-indigo', "➔ LAUNCH");
+        setNodeStatus('fe', 'Clicking Launch', 'indigo');
+      } 
+      else if(p<0.35){
+        // 2. Initialize Dispatcher (Arrived)
+        q('node-be').classList.add('active');
+        showPopup(260,130,'② Launch Received',"FastAPI registers campaign launch and kicks off async background tasks.");
+        setNodeStatus('be', 'Starting Worker', 'indigo');
+      } 
+      else if(p<0.50){
+        // 3. return 202 accepted (In flight reverse)
+        q('node-be').classList.add('active');
+        hlLine('l-fe-be', 'green', true);
+        const r=(p-0.35)/0.15;
+        pktOnLine('fe-be', 1 - r, 'pkt-green', "◀ 202 Accepted");
+        setNodeStatus('be', 'Responding 202', 'green');
+        setNodeStatus('fe', 'Receiving 202', 'green');
+      } 
+      else if(p<0.65){
+        // 4. Update UI queue state (Arrived)
+        q('bar-sent').style.width='0%';
+        setText('val-sent','Launching...');
+        showPopup(145,180,'④ UI Update',"Next.js console updates instantly. The bulk operation won't freeze the client.");
+        setNodeStatus('fe', 'UI Thread Free', 'green');
+      } 
+      else if(p<0.80){
+        // 5. Bulk insert communications (In flight)
+        q('bar-sent').style.width='0%';
+        setText('val-sent','Launching...');
+        
+        q('node-be').classList.add('active');
+        hlLine('l-be-db', 'sky');
+        const r=(p-0.65)/0.15;
+        pktOnLine('be-db', r, 'pkt-sky', "➔ INSERT comms");
+        setNodeStatus('be', 'Bulk Inserting', 'sky');
+      } 
+      else if(p<0.90){
+        // 6. DB comms populated (Arrived)
+        q('bar-sent').style.width='0%';
+        setText('val-sent','Launching...');
+        
+        q('node-be').classList.add('active');
+        q('node-db').classList.add('active');
+        setText('dbc-comms','100 queued');
+        q('dbt-comms').className='db-table hl';
+        showPopup(460,100,'⑥ Queue Populated',"100 message logs generated in PostgreSQL with initial state='queued'.");
+        setNodeStatus('db', 'Logs Queued', 'green');
+      } 
+      else if(p<0.97){
+        // 7. Dispatching batch throttled via Semaphore (In flight)
+        q('bar-sent').style.width='0%';
+        setText('val-sent','Launching...');
+        setText('dbc-comms','100 queued');
+        q('dbt-comms').className='db-table hl';
+        
+        q('node-be').classList.add('active');
+        q('sub-sem').classList.add('hl');
+        hlLine('l-be-ch', 'indigo');
+        
+        for(let i=0;i<20;i++) q('ss'+i).className='sem-slot busy';
+        setText('sem-badge','0/20 free');
+        q('sem-badge').className='badge badge-red';
+        
+        const r=(p-0.90)/0.07;
+        pktOnPath('l-be-ch', r, 'pkt-indigo', "➔ DISPATCH ×20");
+        setText('stub-term','Awaiting incoming batch...');
+        setText('stub-count','0 sent');
+        setNodeStatus('be', 'Throttling SMS', 'indigo');
+      } 
+      else {
+        // 8. Batch received at Channel Stub (Arrived)
+        q('bar-sent').style.width='0%';
+        setText('val-sent','Launching...');
+        setText('dbc-comms','100 queued');
+        q('dbt-comms').className='db-table hl';
+        
+        q('node-be').classList.add('active');
+        q('node-ch').classList.add('active');
+        q('sub-sem').classList.add('hl');
+        hlLine('l-be-ch', 'indigo');
+        
+        for(let i=0;i<20;i++) q('ss'+i).className='sem-slot busy';
+        setText('sem-badge','0/20 free');
+        q('sem-badge').className='badge badge-red';
+        
+        setText('stub-term','Receiving batch...\n[Semaphore(20) throttling]');
+        setText('stub-count','20 in-flight');
+        showPopup(520,320,'⑦ Semaphore Throttling',"asyncio.Semaphore(20) limits connection pooling, avoiding socket fatigue on vendor APIs.");
+        setNodeStatus('be', 'Semaphore Busy', 'red');
+        setNodeStatus('ch', 'Awaiting SMS', 'indigo');
+      }
+      break;
+
+    case 6:
+      setText('fe-chat','"Simulating delivery callbacks..."');
+      q('node-ch').classList.add('active');
+      setText('stub-term','Simulating webhook events...');
+
+      if(p<0.25){
+        // 1. Webhook A opened (P4) (In flight)
+        hlLine('l-ch-be', 'indigo');
+        pktOnPath('l-ch-be', p/0.25, 'pkt-indigo', "➔ WEBHOOK A: opened");
+        setText('stub-term','Sending Webhook A: opened (P4) at t=1.0s');
+        setNodeStatus('ch', 'Firing Webhook A', 'indigo');
+      } 
+      else if(p<0.38){
+        // 2. Webhook A received, DB update query (In flight)
+        q('node-be').classList.add('active');
+        q('sub-guard').classList.add('hl-green');
+        setText('be-guard-eval','A: opened (P4) accepted');
+        q('be-guard-eval').style.color='var(--emerald)';
+        
+        hlLine('l-be-db', 'indigo');
+        const r=(p-0.25)/0.13;
+        pktOnLine('be-db', r, 'pkt-indigo', "➔ UPDATE status");
+        setText('stub-term','Webhook A accepted. Dispatching DB write...');
+        setNodeStatus('be', 'Processing Webhook A', 'indigo');
+      }
+      else if(p<0.45){
+        // 3. Webhook A DB update complete (Arrived)
+        q('node-be').classList.add('active');
+        q('node-db').classList.add('active');
+        q('sub-guard').classList.add('hl-green');
+        q('dbt-comms').className='db-table hl-green';
+        q('dbc-comms').className='db-count green';
+        setText('dbc-comms','1 opened');
+        setText('be-guard-eval','A: opened (P4) accepted');
+        q('be-guard-eval').style.color='var(--emerald)';
+        showPopup(260,240,'② Initial Webhook',"Opened status (P4) arrives first and is successfully stored in the communications table.");
+        setText('stub-term','DB status updated: opened.');
+        setNodeStatus('db', 'Status Updated', 'green');
+      }
+      else if(p<0.70){
+        // 4. Webhook B delivered (P3) delayed (In flight)
+        // PERSIST Webhook A DB status & guard
+        q('node-be').classList.add('active');
+        q('sub-guard').classList.add('hl-green');
+        q('dbt-comms').className='db-table hl-green';
+        q('dbc-comms').className='db-count green';
+        setText('dbc-comms','1 opened');
+        setText('be-guard-eval','A: opened (P4) accepted');
+        q('be-guard-eval').style.color='var(--emerald)';
+        
+        hlLine('l-ch-be', 'amber');
+        const r=(p-0.45)/0.25;
+        pktOnPath('l-ch-be', r, 'pkt-amber', "➔ WEBHOOK B: delivered");
+        setText('stub-term','Sending Webhook B: delivered (P3) at t=1.1s (DELAYED)');
+        setNodeStatus('ch', 'Firing Webhook B', 'amber');
+      } 
+      else if(p<0.85){
+        // 5. Webhook B reaches guard, blocked! DB append audit (In flight)
+        // PERSIST Webhook A DB status
+        q('node-be').classList.add('danger');
+        q('sub-guard').classList.add('hl-red');
+        q('guard-icon').className='guard-icon active';
+        
+        q('dbt-comms').className='db-table hl-green';
+        q('dbc-comms').className='db-count green';
+        setText('dbc-comms','1 opened');
+        
+        setText('be-guard-eval','B: delivered (3) < opened (4) - BLOCKED');
+        q('be-guard-eval').style.color='var(--red)';
+        
+        hlLine('l-be-db','amber');
+        const r=(p-0.70)/0.15;
+        pktOnLine('be-db', r, 'pkt-amber', "➔ APPEND audit");
+        setText('stub-term','Priority check: Regressive webhook blocked. Auditing...');
+        setNodeStatus('be', 'Evaluating Priority', 'red');
+      }
+      else {
+        // 6. Webhook B DB audit complete (Arrived)
+        q('node-be').classList.add('danger');
+        q('node-db').classList.add('active');
+        q('sub-guard').classList.add('hl-red');
+        q('guard-icon').className='guard-icon active';
+        
+        q('dbt-comms').className='db-table hl-green';
+        q('dbc-comms').className='db-count green';
+        setText('dbc-comms','1 opened');
+        
+        q('dbt-receipts').className='db-table hl-amber';
+        q('dbc-receipts').className='db-count green';
+        setText('dbc-receipts','1 log');
+        
+        setText('be-guard-eval','B: delivered (3) < opened (4) - BLOCKED');
+        q('be-guard-eval').style.color='var(--red)';
+        
+        showPopup(260,240,'⑤ Priority Status Guard',"Delivered (P3) arrives delayed. Since 3 < 4 (Opened), the guard blocks database status regression, while appending B to the audit log.");
+        setText('stub-term','Audit log entry appended. Webhook transaction complete.');
+        setNodeStatus('be', 'Regression Blocked', 'red');
+        setNodeStatus('db', 'Audit Appended', 'amber');
+      }
+      break;
+
+    case 7:
+      setText('fe-chat','"Order conversion simulation..."');
+      q('node-ch').classList.add('active');
+      setText('stub-term','Processing order conversion...');
+
+      if(p<0.35){
+        // 1. Webhook conversion (In flight)
+        hlLine('l-ch-be', 'green');
+        pktOnPath('l-ch-be', p/0.35, 'pkt-green', "➔ WEBHOOK: purchase");
+        setNodeStatus('ch', 'Firing Purchase', 'green');
+      } 
+      else if(p<0.55){
+        // 2. Initialize SQL Transaction (Arrived)
+        q('node-be').classList.add('active');
+        showPopup(260,240,'② Webhook Received',"purchased callback received. FastAPI initiates write transaction.");
+        setNodeStatus('be', 'BEGIN Transaction', 'green');
+      } 
+      else if(p<0.80){
+        // 3. Submit atomic writes (In flight)
+        q('node-be').classList.add('active');
+        hlLine('l-be-db','green');
+        const r=(p-0.55)/0.25;
+        pktOnLine('be-db', r, 'pkt-green', "➔ COMMIT ACID TX");
+        setNodeStatus('be', 'Committing ACID', 'green');
+      } 
+      else {
+        // 4. Transaction committed (Arrived)
+        q('node-be').classList.add('active');
+        q('node-db').classList.add('success');
+        q('dbt-customers').className='db-table hl-green';
+        q('dbt-comms').className='db-table hl-green';
+        q('dbt-orders').className='db-table hl-green';
+        q('dbc-customers').className='db-count green';
+        q('dbc-comms').className='db-count green';
+        q('dbc-orders').className='db-count green';
+        setText('dbc-customers','400 recs (updated)');
+        setText('dbc-comms','1 purchased');
+        setText('dbc-orders','1,201 recs');
+        
+        q('acid-ring').style.opacity='1';
+        q('acid-label').style.opacity='1';
+        
+        showPopup(650,160,'④ Atomic Transaction',"ACID guarantees that updating the customer spent, inserting the order row, and updating the communication status succeed together or rollback completely.");
+        setNodeStatus('db', 'ACID Committed', 'green');
+      }
+      break;
+
+    case 8:
+      setText('fe-chat','"Dashboard polling /stats..."');
+      q('node-fe').classList.add('active');
+
+      if(p<0.40){
+        // 1. Send polling query (In flight reverse path: FE to DB)
+        hlLine('l-db-fe', 'indigo', true);
+        show('radar');
+        pktOnPath('l-db-fe', 1 - (p/0.40), 'pkt-indigo', "➔ GET /stats");
+        setNodeStatus('fe', 'Polling Metrics', 'indigo');
+      } 
+      else if(p<0.60){
+        // 2. Fetch metrics summary (Arrived)
+        q('node-db').classList.add('active');
+        showPopup(350,300,'② Next.js Polling',"Stateless short polling scales to thousands of concurrent users without the persistent connection overhead of WebSockets.");
+        setNodeStatus('db', 'Returning Summary', 'green');
+      } 
+      else if(p<0.85){
+        // 3. Return statistics (In flight path: DB to FE)
+        q('node-db').classList.add('active');
+        hlLine('l-db-fe', 'green');
+        const r=(p-0.60)/0.25;
+        pktOnPath('l-db-fe', r, 'pkt-green', "◀ ROI: 30525%");
+        setNodeStatus('db', 'Sending Metrics', 'green');
+        setNodeStatus('fe', 'Awaiting Sync', 'green');
+      } 
+      else {
+        // 4. Dashboard metrics synced (Arrived)
+        q('node-db').classList.add('active');
+        q('bar-sent').style.width='100%';
+        q('bar-conv').style.width='18%';
+        setText('val-sent','100');
+        setText('val-conv','18');
+        setText('val-roi','30,525%');
+        showPopup(145,300,'④ Dashboard Synced',"Next.js UI updates the funnel charts and ROI metrics instantly upon receiving the stats payload.");
+        setNodeStatus('fe', 'Dashboard Synced', 'green');
+      }
+      break;
+  }
+}
+
+// ── Controls & Loops ──────────────────────────────────────────────────────
+function togglePlay(){
+  playing=!playing;
+  if(playing){
+    q('svg-play').style.display='none';
+    q('svg-pause').style.display='block';
+    setText('play-label','Pause');
+    playLoop();
+  } else {
+    q('svg-play').style.display='block';
+    q('svg-pause').style.display='none';
+    setText('play-label','Auto-Play');
+    if(rafId){
+      cancelAnimationFrame(rafId);
+      rafId=null;
+    }
+  }
+}
+
+function playLoop(){
+  if(!playing)return;
+  prog += speedMul;
+  if(prog>=800){
+    prog=799;
+    togglePlay();
+  }
+  updateUI();
+  render();
+  rafId=requestAnimationFrame(playLoop);
+}
+
+function scrubTo(val){
+  if(playing) togglePlay();
+  prog=parseInt(val);
+  updateUI();
+  render();
+}
+
+function stepForward(){
+  if(playing) togglePlay();
+  prog=Math.min(799, prog+10);
+  updateUI();
+  render();
+}
+
+function stepBack(){
+  if(playing) togglePlay();
+  prog=Math.max(0, prog-10);
+  updateUI();
+  render();
+}
+
+// Ensure granularity: single clicks step forward/backward step-by-step
+function jumpToScene(sceneId){
+  if(playing) togglePlay();
+  prog=(sceneId-1)*100;
+  updateUI();
+  render();
+}
+
+function updateUI(){
+  q('scrubber').value=prog;
+  q('scrub-pct').textContent=((prog/799)*100).toFixed(1)+'%';
+}
+
+// ── Dynamic Canvas scaling for responsiveness ────────────────────────────
+function handleResize(){
+  const wrap=document.querySelector('.canvas-wrap');
+  const box=document.querySelector('.canvas-box');
+  if(!wrap||!box)return;
+  const scale=Math.min(wrap.clientWidth/852, wrap.clientHeight/508, 1);
+  box.style.transform=`scale(${scale})`;
+  box.style.transformOrigin='center center';
+}
+
+window.addEventListener('resize', handleResize);
+window.onload=()=>{
+  resetAll();
+  render();
+  setTimeout(handleResize,100);
+};
+</script>
+</body>
+</html>
