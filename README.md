@@ -6,55 +6,6 @@ Nexora hands Indian e-commerce teams a conversational control panel for their en
 
 Nexora runs as a set of loosely coupled services: a Next.js interface up front, a FastAPI service handling business logic, PostgreSQL for persistence, and a stand-in delivery provider that simulates real-world message sending.
 
-### Data Flow at a Glance
-
-```mermaid
-graph TD
-    %% Frontend Block
-    subgraph Frontend [Next.js 14 App Router - Fully Responsive]
-        UI[CRM Dashboard & Analytics]
-        Chat[AI Copilot Chat UI & Responsive Mobile Slider]
-    end
-
-    %% Backend Block
-    subgraph Backend [FastAPI CRM Backend — Port 8000]
-        Router[Router Layer /campaigns, /customers, /chat]
-        Copilot[Copilot Coordinator /agent]
-        Rotator[Gemini API Key Rotator Pool]
-        Dispatcher[Campaign Dispatcher /dispatcher]
-        Receipts[Receipt Webhook /receipts]
-        PriorityMap[Webhook Status Priority Guard]
-    end
-
-    %% Database Block
-    subgraph Storage [PostgreSQL 15]
-        DB[(PostgreSQL Database)]
-    end
-
-    %% Channel Simulator Block
-    subgraph Simulator [Channel Stub Service — Port 8001]
-        StubAPI[Simulator API /send]
-        Engine[Delivery Simulation Engine]
-    end
-
-    %% External LLM API
-    LLM[Gemini API Rotation Pool]
-
-    %% Data Flow Connections
-    UI <-->|HTTP REST / stats polling| Router
-    Chat <-->|HTTP POST /chat| Router
-    Router <-->|Session Store & Copilot Context| Copilot
-    Copilot <-->|Function Calling / Text Generation| LLM
-    Copilot -- 429 Too Many Requests --> Rotator
-    Copilot -->|Parse Goal| Dispatcher
-    Dispatcher -->|1. Bulk Create Communications| DB
-    Dispatcher -->|2. POST Async Messages| StubAPI
-    StubAPI -->|202 Accepted & Spawn Task| Engine
-    Engine -->|Wait Delays & Roll Dice| Engine
-    Engine -->|3. POST Event Receipt| Receipts
-    Receipts -->|4. Priority Map Guard| PriorityMap
-    PriorityMap -->|5. Atomic Transaction: Update Status & Logs| DB
-```
 
 ---
 
@@ -135,7 +86,7 @@ docker-compose up -d
 4. Duplicate `.env.example` as `.env` and fill in your credentials:
 
    ```env
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/xeno_crm
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/nexora
 
    # Rotation keys for Gemini API
    GEMINI_KEY_1=your_first_gemini_api_key_here

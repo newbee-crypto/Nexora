@@ -4,7 +4,7 @@
 
 databases:
   - name: nexora-crm-db
-    databaseName: xeno_crm
+    databaseName: nexora
     user: postgres
     plan: free
 
@@ -43,4 +43,4 @@ services:
       - key: OPENAI_MODEL
         value: gemini-2.5-flash
       - key: CHANNEL_STUB_URL
-        value: http://nexora-channel-stub # Render private network routing
+        value: http://nexora-channel-stub 
