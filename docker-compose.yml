@@ -1,45 +1,23 @@
-# docker-compose.yml
-# -------------------
-# This file sets up the LOCAL development environment.
-# We only need PostgreSQL here — FastAPI services run directly on your machine.
-#
-# Why Docker for Postgres only?
-# → It avoids installing PostgreSQL natively on Windows/Mac, which can be painful.
-# → The container is ephemeral and isolated — easy to reset.
-# → In production (Railway), Postgres is managed by Railway's addon,
-#   so we don't need Docker in prod at all.
-
 version: "3.9"
 
 services:
-  # ── PostgreSQL 15 ──────────────────────────────────────────────────────────
-  postgres:
-    image: postgres:15-alpine          # Alpine variant = smaller image footprint
-    container_name: xenocrm_postgres
-    restart: unless-stopped            # Auto-restart if Docker Desktop restarts
+    postgres:
+    image: postgres:15-alpine          
+    restart: unless-stopped            
     environment:
-      # These three env vars are the standard way to configure Postgres on first boot.
-      # They match exactly what we put in DATABASE_URL in backend/.env
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: xenocrm
     ports:
-      # host_port:container_port  →  localhost:5432 maps to Postgres inside the container
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      # Named volume → data persists even if you do `docker-compose down`
-      # Use `docker-compose down -v` to also wipe the data volume
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      # Docker will mark the container "healthy" only once pg_isready succeeds.
-      # This prevents FastAPI from trying to connect before Postgres is fully ready.
       test: ["CMD-SHELL", "pg_isready -U postgres -d xenocrm"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# ── Named Volumes ──────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
-    # Docker manages this volume on your host machine.
-    # It survives container restarts, which is exactly what we want for a DB.
+    
