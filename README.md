@@ -1,4 +1,4 @@
-# 🛰️ Nexora — The AI Copilot Powering Modern CRM & Campaigns
+# 🛰️ Nexora — Natural Language Campaign Orchestrator
 
 Nexora hands Indian e-commerce teams a conversational control panel for their entire marketing lifecycle. Instead of clicking through dashboards, marketers simply *talk* to the system — describing who they want to reach, and Nexora handles segmentation, channel selection, copywriting, dispatch, and live funnel reporting (with ROI baked in) from a single chat window.
 
