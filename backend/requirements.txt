@@ -1,0 +1,37 @@
+# backend/requirements.txt
+# -------------------------
+# All Python packages required by the CRM Backend service.
+# Install with: pip install -r requirements.txt
+#
+# Pinned to minor versions (e.g., fastapi>=0.110) to allow patch updates
+# while preventing breaking major-version changes.
+
+# ── Web Framework ─────────────────────────────────────────────────────────────
+fastapi>=0.110.0          # High-performance async Python web framework
+uvicorn[standard]>=0.29.0 # ASGI server to run FastAPI. [standard] adds watchfiles for --reload
+
+# ── Database ──────────────────────────────────────────────────────────────────
+sqlalchemy>=2.0.0         # ORM and SQL toolkit — we use the 2.x declarative style
+psycopg2-binary>=2.9.9    # PostgreSQL adapter for Python. Binary = no libpq compile needed
+
+# ── AI / OpenAI ───────────────────────────────────────────────────────────────
+openai>=1.30.0            # Official OpenAI Python SDK — for GPT-4o function calling
+
+# ── HTTP Client ───────────────────────────────────────────────────────────────
+httpx==0.27.2             # Async HTTP client — used by dispatcher to call Channel Stub
+httpcore==1.0.8           # Explicit pin to prevent pip resolver backtracking timeouts
+
+# ── Environment / Config ──────────────────────────────────────────────────────
+python-dotenv>=1.0.0      # Reads .env file into os.environ
+
+# ── Data Generation (seed.py only) ───────────────────────────────────────────
+faker>=25.0.0             # Fake data generator with en_IN locale for Indian names/phones
+
+# ── Data Validation ───────────────────────────────────────────────────────────
+pydantic>=2.7.0           # Data validation for FastAPI request/response schemas
+                          # FastAPI uses Pydantic under the hood — must be v2 compatible
+
+# ── LangChain Agent Framework ─────────────────────────────────────────────────
+langchain>=0.1.0
+langchain-openai>=0.1.0
+langgraph>=0.1.0
