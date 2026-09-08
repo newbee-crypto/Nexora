@@ -1,0 +1,23 @@
+# channel-stub/requirements.txt
+# --------------------------------
+# Dependencies for the Channel Stub microservice.
+# This service is intentionally MINIMAL — it knows nothing about the CRM database.
+# Its only job is to accept send requests and fire HTTP callbacks.
+#
+# Install with: pip install -r requirements.txt
+# Note: There is NO sqlalchemy, NO openai, NO faker here.
+# Keeping services small and focused is a core microservice principle.
+
+# ── Web Framework ─────────────────────────────────────────────────────────────
+fastapi>=0.110.0          # Same framework as CRM backend for consistency
+uvicorn[standard]>=0.29.0 # ASGI server — [standard] adds watchfiles for --reload
+
+# ── Async HTTP Client ─────────────────────────────────────────────────────────
+httpx==0.27.2             # Async HTTP client for sending callbacks to CRM /receipts
+httpcore==1.0.8           # Explicit pin to prevent pip resolver backtracking timeouts
+
+# ── Environment / Config ──────────────────────────────────────────────────────
+python-dotenv>=1.0.0      # Reads CRM_RECEIPT_URL from .env file
+
+# ── Data Validation ───────────────────────────────────────────────────────────
+pydantic>=2.7.0           # FastAPI uses Pydantic for request body validation
