@@ -1,0 +1,46 @@
+# render.yaml
+# Render Blueprint Specification to deploy the database and backend services
+# Reference: https://render.com/docs/blueprints
+
+databases:
+  - name: nexora-crm-db
+    databaseName: xeno_crm
+    user: postgres
+    plan: free
+
+services:
+  # ── Channel Stub Simulator Service ──────────────────────────────────────────
+  - type: web
+    name: nexora-channel-stub
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    rootDir: channel-stub
+    plan: free
+    envVars:
+      - key: CRM_RECEIPT_URL
+        value: http://nexora-crm-backend # Render private network routing (no port needed)
+
+  # ── CRM Backend Service ──────────────────────────────────────────────────────
+  - type: web
+    name: nexora-crm-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nexora-crm-db
+          property: connectionString
+      - key: GEMINI_KEY_1
+        sync: false # Set this in the Render dashboard after creation
+      - key: OPENAI_API_KEY
+        sync: false # Set this to the same value as GEMINI_KEY_1
+      - key: OPENAI_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: OPENAI_MODEL
+        value: gemini-2.5-flash
+      - key: CHANNEL_STUB_URL
+        value: http://nexora-channel-stub # Render private network routing
