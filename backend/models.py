@@ -28,7 +28,6 @@ class Customer(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     channel_preference: Mapped[str] = mapped_column(String(20), nullable=False)
 
-    # Denormalized stats — allows segment queries without joining orders table
     total_orders: Mapped[int] = mapped_column(Integer, default=0)
     total_spent: Mapped[float] = mapped_column(Float, default=0.0)
     last_order_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
